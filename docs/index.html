@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ubuntu-post-install — Fresh Ubuntu, done right.</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #080c10;
+  --bg2:      #0d1117;
+  --bg3:      #161b22;
+  --bg4:      #1c2128;
+  --border:   #30363d;
+  --text:     #e6edf3;
+  --muted:    #8b949e;
+  --dim:      #484f58;
+  --accent:   #58a6ff;
+  --accent2:  #3fb950;
+  --purple:   #bc8cff;
+  --orange:   #f0883e;
+  --red:      #f85149;
+  --mono:     'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  --sans:     -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.6; overflow-x: hidden; }
+::selection { background: rgba(88,166,255,.25); }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ─── NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── GLOW BLOBS ─── */
+.glow-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.12;
+  pointer-events: none;
+  animation: drift 20s ease-in-out infinite;
+}
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 15px) scale(0.95); }
+}
+
+/* ─── NAV ─── */
+header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 0 2rem;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(8,12,16,.8);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(48,54,61,.6);
+}
+.nav-brand {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.nav-brand .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); box-shadow: 0 0 8px var(--accent2); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.nav-links { display: flex; gap: 1.5rem; }
+.nav-links a { font-size: 0.82rem; color: var(--muted); transition: color .2s; }
+.nav-links a:hover { color: var(--text); text-decoration: none; }
+.nav-cta {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
+  transition: opacity .2s;
+}
+.nav-cta:hover { opacity: 0.85; text-decoration: none; }
+
+/* ─── HERO ─── */
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 6rem 2rem 4rem;
+  overflow: hidden;
+}
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(48,54,61,.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(48,54,61,.18) 1px, transparent 1px);
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, black 40%, transparent 100%);
+}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent2);
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  padding: 0.3rem 0.85rem;
+  border: 1px solid rgba(63,185,80,.3);
+  border-radius: 2em;
+  background: rgba(63,185,80,.07);
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+.hero h1 {
+  font-size: clamp(2.2rem, 6vw, 4rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -1px;
+  color: var(--text);
+  margin-bottom: 1.25rem;
+  position: relative;
+}
+.hero h1 .highlight {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-sub {
+  font-size: 1.1rem;
+  color: var(--muted);
+  max-width: 560px;
+  line-height: 1.7;
+  margin-bottom: 2.5rem;
+  position: relative;
+}
+.hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; position: relative; margin-bottom: 3.5rem; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.4rem;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all .2s;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 0 24px rgba(88,166,255,.25);
+}
+.btn-primary:hover { opacity: 0.88; text-decoration: none; transform: translateY(-1px); box-shadow: 0 4px 28px rgba(88,166,255,.35); }
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--bg3); text-decoration: none; transform: translateY(-1px); }
+
+/* ─── TERMINAL ─── */
+.terminal {
+  width: min(680px, 90vw);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.03);
+  position: relative;
+  text-align: left;
+}
+.term-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.term-dot { width: 12px; height: 12px; border-radius: 50%; }
+.term-dot.r { background: #ff5f57; }
+.term-dot.y { background: #febc2e; }
+.term-dot.g { background: #28c840; }
+.term-title { flex: 1; text-align: center; font-size: 0.72rem; color: var(--muted); font-family: var(--mono); }
+.term-body { padding: 1.2rem 1.4rem; font-family: var(--mono); font-size: 0.8rem; line-height: 1.8; }
+.term-body .prompt { color: var(--accent2); }
+.term-body .cmd { color: var(--text); }
+.term-body .flag { color: var(--accent); }
+.term-body .val  { color: var(--orange); }
+.term-body .comment { color: var(--dim); }
+.term-body .ok { color: var(--accent2); }
+.term-body .skip { color: var(--muted); }
+.term-body .warn { color: var(--orange); }
+.cursor {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--accent);
+  vertical-align: text-bottom;
+  animation: blink .9s step-end infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* ─── STATS BAR ─── */
+.stats-bar {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg2);
+  overflow: hidden;
+}
+.stat {
+  flex: 1;
+  padding: 1.75rem 1rem;
+  text-align: center;
+  border-right: 1px solid var(--border);
+  transition: background .2s;
+}
+.stat:last-child { border-right: none; }
+.stat:hover { background: var(--bg3); }
+.stat-num {
+  font-size: 2rem;
+  font-weight: 800;
+  font-family: var(--mono);
+  background: linear-gradient(135deg, var(--accent) 0%, var(--purple) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+  margin-bottom: 0.3rem;
+}
+.stat-label { font-size: 0.78rem; color: var(--muted); }
+
+/* ─── SECTIONS ─── */
+.section { position: relative; padding: 6rem 2rem; max-width: 1100px; margin: 0 auto; }
+.section-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+}
+.section-title {
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.5px;
+  margin-bottom: 0.75rem;
+}
+.section-sub { font-size: 1rem; color: var(--muted); max-width: 560px; line-height: 1.7; margin-bottom: 3rem; }
+
+/* ─── FEATURES GRID ─── */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.feature-card {
+  background: var(--bg2);
+  padding: 1.75rem;
+  transition: background .2s;
+  position: relative;
+  overflow: hidden;
+}
+.feature-card:hover { background: var(--bg3); }
+.feature-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(88,166,255,.04) 0%, transparent 60%);
+  opacity: 0;
+  transition: opacity .3s;
+}
+.feature-card:hover::after { opacity: 1; }
+.feat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+.feat-icon.blue  { background: rgba(88,166,255,.12); }
+.feat-icon.green { background: rgba(63,185,80,.12); }
+.feat-icon.purple{ background: rgba(188,140,255,.12); }
+.feat-icon.orange{ background: rgba(240,136,62,.12); }
+.feat-icon.red   { background: rgba(248,81,73,.12); }
+.feat-icon.teal  { background: rgba(56,189,248,.12); }
+.feature-card h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--text); }
+.feature-card p  { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+
+/* ─── STEPS TIMELINE ─── */
+.steps-list { display: flex; flex-direction: column; gap: 0; }
+.step-row {
+  display: grid;
+  grid-template-columns: 56px 1px 1fr;
+  gap: 0 1.5rem;
+  align-items: stretch;
+}
+.step-num-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.step-num {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  flex-shrink: 0;
+  transition: all .3s;
+  z-index: 1;
+}
+.step-row:hover .step-num {
+  background: rgba(88,166,255,.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.step-line {
+  width: 1px;
+  flex: 1;
+  min-height: 40px;
+  background: var(--border);
+  margin: 0 auto;
+}
+.step-row:last-child .step-line { background: transparent; }
+.step-content {
+  padding: 0.6rem 0 2rem;
+}
+.step-content h3 { font-size: 0.95rem; font-weight: 700; color: var(--text); margin-bottom: 0.25rem; }
+.step-content p  { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+.step-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+.stag {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  background: var(--bg4);
+  color: var(--dim);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+}
+
+/* ─── EXTRAS SHOWCASE ─── */
+.extras-layout {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 2px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.extras-sidebar {
+  background: var(--bg2);
+  padding: 0;
+}
+.group-btn {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 1.2rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all .15s;
+}
+.group-btn:last-child { border-bottom: none; }
+.group-btn:hover, .group-btn.active { background: var(--bg4); color: var(--text); }
+.group-btn.active { border-left: 2px solid var(--accent); }
+.group-btn .gcnt {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 2em;
+  background: var(--bg3);
+  color: var(--dim);
+}
+.extras-panel { background: var(--bg2); padding: 1.5rem; }
+.extras-pills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.6rem;
+}
+.epill {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  transition: all .2s;
+  cursor: default;
+}
+.epill:hover { border-color: var(--accent); background: rgba(88,166,255,.06); transform: translateY(-1px); }
+.epill-name { font-family: var(--mono); font-weight: 700; font-size: 0.82rem; color: var(--text); margin-bottom: 0.2rem; }
+.epill-desc { font-size: 0.72rem; color: var(--muted); }
+.epill-method {
+  display: inline-block;
+  font-size: 0.62rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  margin-top: 0.3rem;
+  font-weight: 600;
+}
+.epill-method.apt  { background: rgba(63,185,80,.12); color: var(--accent2); }
+.epill-method.snap { background: rgba(88,166,255,.12); color: var(--accent); }
+
+/* ─── OPTIONS TABLE ─── */
+.opts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.opt-group {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.opt-group-head {
+  padding: 0.75rem 1rem;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.opt-row {
+  display: flex;
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid rgba(48,54,61,.5);
+  align-items: flex-start;
+  gap: 0.75rem;
+  transition: background .15s;
+}
+.opt-row:last-child { border-bottom: none; }
+.opt-row:hover { background: var(--bg3); }
+.opt-flag { font-family: var(--mono); font-size: 0.73rem; color: var(--accent); white-space: nowrap; flex-shrink: 0; min-width: 120px; }
+.opt-desc { font-size: 0.78rem; color: var(--muted); }
+
+/* ─── CODE BLOCKS ─── */
+.pre-wrap { position: relative; margin: 1.5rem 0; }
+pre {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem 1.4rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: #c9d1d9;
+  line-height: 1.75;
+}
+.copy-btn {
+  position: absolute;
+  top: 0.6rem; right: 0.6rem;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 5px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: all .15s;
+}
+.copy-btn:hover { color: var(--text); border-color: var(--muted); }
+.copy-btn.ok { color: var(--accent2); border-color: rgba(63,185,80,.5); }
+code {
+  font-family: var(--mono);
+  font-size: 0.83em;
+  background: rgba(88,166,255,.08);
+  border: 1px solid rgba(88,166,255,.15);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+  color: var(--accent);
+}
+pre code { background: none; border: none; padding: 0; color: inherit; font-size: inherit; }
+
+/* ─── CTA ─── */
+.cta-section {
+  position: relative;
+  padding: 6rem 2rem;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+}
+.cta-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 80% at 50% 100%, rgba(88,166,255,.07) 0%, transparent 70%);
+}
+.cta-section h2 { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 800; letter-spacing: -.5px; margin-bottom: 1rem; position: relative; }
+.cta-section p { color: var(--muted); margin-bottom: 2rem; position: relative; }
+
+/* ─── FOOTER ─── */
+footer {
+  padding: 2rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--dim);
+  background: var(--bg2);
+}
+
+/* ─── DIVIDER ─── */
+.divider {
+  border: none;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ─── SCROLL FADE-IN ─── */
+.fade-in { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+.fade-in.visible { opacity: 1; transform: translateY(0); }
+
+/* ─── MOBILE ─── */
+@media (max-width: 900px) {
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  .opts-grid { grid-template-columns: 1fr; }
+  .extras-layout { grid-template-columns: 1fr; }
+  .extras-sidebar { display: flex; overflow-x: auto; }
+  .group-btn { border-bottom: none; border-right: 1px solid var(--border); white-space: nowrap; }
+}
+@media (max-width: 640px) {
+  .features-grid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 2rem; }
+  .nav-links { display: none; }
+  .stats-bar { flex-wrap: wrap; }
+  .stat { min-width: 50%; }
+  .examples-grid { grid-template-columns: 1fr !important; }
+  .nav-cta-github { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- BLOBS -->
+<div style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden">
+  <div class="glow-blob" style="width:500px;height:500px;background:#1d4ed8;top:-150px;left:-100px;animation-delay:0s"></div>
+  <div class="glow-blob" style="width:400px;height:400px;background:#7c3aed;top:200px;right:-100px;animation-delay:-7s"></div>
+  <div class="glow-blob" style="width:350px;height:350px;background:#065f46;bottom:100px;left:30%;animation-delay:-14s"></div>
+</div>
+
+<!-- NAV -->
+<header>
+  <div class="nav-brand">
+    <div class="dot"></div>
+    ubuntu-post-install
+  </div>
+  <nav class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#steps">Steps</a>
+    <a href="#extras">Extras</a>
+    <a href="#options">Options</a>
+    <a href="#examples">Examples</a>
+  </nav>
+  <div style="display:flex;gap:.6rem;align-items:center">
+    <a href="https://github.com/franckferman/ubuntu-post-install" target="_blank" rel="noopener" class="btn nav-cta nav-cta-github" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);display:flex;align-items:center;gap:.4rem">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.729.083-.729 1.205.084 1.84 1.237 1.84 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.468-2.38 1.235-3.22-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.3 1.23a11.5 11.5 0 0 1 3.003-.404c1.02.005 2.047.138 3.003.404 2.29-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.91 1.235 3.22 0 4.61-2.807 5.625-5.479 5.92.43.372.823 1.102.823 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.694.825.576C20.565 21.795 24 17.295 24 12c0-6.63-5.37-12-12-12z"/></svg>
+      GitHub
+    </a>
+    <a href="#quickstart" class="btn nav-cta">Get started →</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+
+  <div class="hero-eyebrow">
+    <span>✦</span> Ubuntu 22.04 · 24.04 · v2.0.0
+  </div>
+
+  <h1>
+    Fresh Ubuntu.<br>
+    <span class="highlight">Done right.</span>
+  </h1>
+
+  <p class="hero-sub">
+    One script. 15 steps. Hardening, privacy, developer tooling, GNOME configuration, and optional third-party software — fully automated, fully auditable.
+  </p>
+
+  <div class="hero-actions">
+    <a href="#quickstart" class="btn btn-primary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      Quick start
+    </a>
+    <a href="README.md" class="btn btn-secondary">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Full docs
+    </a>
+  </div>
+
+  <!-- TERMINAL -->
+  <div class="terminal">
+    <div class="term-bar">
+      <div class="term-dot r"></div>
+      <div class="term-dot y"></div>
+      <div class="term-dot g"></div>
+      <div class="term-title">bash — ubuntu-post-install.sh</div>
+    </div>
+    <div class="term-body">
+      <div><span class="prompt">$</span> <span class="cmd">bash ubuntu-post-install.sh</span> <span class="flag">--theme</span> <span class="val">dark</span> <span class="flag">--extras</span> <span class="val">devops,signal</span> <span class="flag">--power-profile</span> <span class="val">performance</span></div>
+      <div style="margin-top:.5rem"><span class="ok">✅</span> <span style="color:var(--muted)">Step 1 — System update complete.</span></div>
+      <div><span class="ok">✅</span> <span style="color:var(--muted)">Step 2 — Firewall configured (ufw, hardened).</span></div>
+      <div><span class="ok">✅</span> <span style="color:var(--muted)">Step 3 — GNOME settings applied.</span></div>
+      <div><span class="ok">✅</span> <span style="color:var(--muted)">Step 4 — System hardened (root locked, USBGuard active).</span></div>
+      <div><span class="ok">✅</span> <span style="color:var(--muted)">Step 5 — Apps installed (nala, keepassxc, obsidian, mullvad…).</span></div>
+      <div><span class="skip">➡️ </span> <span style="color:var(--muted)">Step 9 — Nerd Fonts already installed. Skipping.</span></div>
+      <div><span class="ok">✅</span> <span style="color:var(--muted)">Step 15 — Extras: docker, gh, hashicorp, podman, signal done.</span></div>
+      <div style="margin-top:.5rem"><span class="prompt">$</span> <span class="cursor"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-num">15</div><div class="stat-label">Automated steps</div></div>
+  <div class="stat"><div class="stat-num">20</div><div class="stat-label">Optional extras</div></div>
+  <div class="stat"><div class="stat-num">60+</div><div class="stat-label">CLI flags</div></div>
+  <div class="stat"><div class="stat-num">3</div><div class="stat-label">Firewall engines</div></div>
+  <div class="stat"><div class="stat-num">CIS</div><div class="stat-label">Benchmark aligned</div></div>
+</div>
+
+<!-- FEATURES -->
+<div id="features" style="background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<div class="section fade-in">
+  <div class="section-tag">Why this script</div>
+  <h2 class="section-title">Everything a fresh install needs.<br>Nothing it doesn't.</h2>
+  <p class="section-sub">Built for people who know what they want. Every step is transparent, every default is documented, every choice is overridable.</p>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feat-icon blue">🔒</div>
+      <h3>CIS-aligned hardening</h3>
+      <p>Locks root, installs USBGuard, stops and masks risky services, removes legacy packages. Three profiles: desktop, enterprise, server.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon green">🛡️</div>
+      <h3>Privacy by default</h3>
+      <p>Mutes audio, kills mic, disables remote desktop, clears bash history, removes recent files tracking. Off by default, opt back in.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon purple">🦊</div>
+      <h3>Firefox + arkenfox</h3>
+      <p>Multiple profiles, hardened or relaxed user.js, uBlock Origin + Privacy Badger, optional extension set. All automated.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon orange">📦</div>
+      <h3>20 extras, 13 groups</h3>
+      <p>Docker, GitHub CLI, Signal, VSCode, Brave, ProtonVPN, Slack and more — each via its official repo. Atomic and meta-groups, <code>--skip-extras</code> to fine-tune.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon red">⚡</div>
+      <h3>Idempotent</h3>
+      <p>Already-installed packages, repos, and fonts are skipped. Safe to re-run. Checks for conflicting apt processes before starting.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feat-icon teal">🎨</div>
+      <h3>Full GNOME control</h3>
+      <p>Theme, GTK variant, background color, dock size, Night Light temperature, keyboard layouts, power profile — all from the CLI.</p>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- QUICKSTART -->
+<div id="quickstart">
+<div class="section fade-in">
+  <div class="section-tag">Quick start</div>
+  <h2 class="section-title">Up and running in one command.</h2>
+  <p class="section-sub">Download the script, review it, run it. No installer, no package, no PPA.</p>
+
+  <div class="pre-wrap">
+    <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<pre><span style="color:var(--dim)"># Download</span>
+curl -O https://raw.githubusercontent.com/franckferman/ubuntu-post-install/stable/ubuntu-post-install.sh
+
+<span style="color:var(--dim)"># Run with defaults — dark theme, performance, all 15 steps</span>
+bash ubuntu-post-install.sh
+
+<span style="color:var(--dim)"># Developer setup</span>
+bash ubuntu-post-install.sh --extras devops,vscode,signal --apps-profile extra
+
+<span style="color:var(--dim)"># Privacy-first workstation</span>
+bash ubuntu-post-install.sh --extras privacy --firefox-profiles main --firefox-hardened-profiles main
+
+<span style="color:var(--dim)"># VPS / headless server</span>
+bash ubuntu-post-install.sh --hardening-profile server --no-lock-root --no-snap --no-mullvad --steps 1,2,4,5</pre>
+  </div>
+</div>
+</div>
+
+<!-- STEPS -->
+<div id="steps" style="background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<div class="section fade-in">
+  <div class="section-tag">Steps</div>
+  <h2 class="section-title">15 steps. Run all or pick any.</h2>
+  <p class="section-sub">Use <code>--steps 1,3-7,15</code> to run exactly what you need. Each step is fully independent.</p>
+
+  <div class="steps-list">
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">01</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>System update</h3><p>Full <code>apt upgrade</code>, autoclean, autoremove. The obvious first step.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">02</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Firewall</h3><p>Installs and configures your chosen engine with hardened (drop all incoming) or transparent profile.</p>
+      <div class="step-tags"><span class="stag">ufw</span><span class="stag">nftables</span><span class="stag">iptables</span><span class="stag">--allow-ssh</span></div></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">03</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>System settings</h3><p>GNOME theme, privacy controls, audio, power profile, Night Light, keyboard layouts, dock size.</p>
+      <div class="step-tags"><span class="stag">--theme</span><span class="stag">--power-profile</span><span class="stag">--keyboard-layouts</span></div></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">04</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>System hardening</h3><p>Root lock, USBGuard, risky services masked, legacy packages removed. CIS Ubuntu Benchmark aligned.</p>
+      <div class="step-tags"><span class="stag">--hardening-profile</span><span class="stag">--no-usbguard</span><span class="stag">--skip-services</span></div></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">05</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Basic apps</h3><p>APT packages (minimal/default/extra profile), Obsidian, OnlyOffice, Mullvad VPN.</p>
+      <div class="step-tags"><span class="stag">--apps-profile</span><span class="stag">--no-snap</span><span class="stag">--mullvad-source</span></div></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">06</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Firefox profiles</h3><p>Creates profiles, applies arkenfox user.js in hardened or relaxed mode, installs extensions.</p>
+      <div class="step-tags"><span class="stag">--firefox-hardened-profiles</span><span class="stag">--firefox-relaxed-profiles</span></div></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">07</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Vim config</h3><p>vim-plug + gruvbox + NERDTree + vim-airline. Or minimal (no plugin manager) or bare (zero deps).</p>
+      <div class="step-tags"><span class="stag">--vim-preset full|minimal|bare</span></div></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">08</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>LazyVim</h3><p>Neovim + LazyVim starter distribution — the modern Neovim setup.</p>
+      <div class="step-tags"><span class="stag">--editor neovim|both|none</span></div></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">09</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Nerd Fonts</h3><p>Downloads the latest release from GitHub, installs to <code>~/.local/share/fonts</code>. Required for Powerlevel10k glyphs.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">10</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Oh My Zsh</h3><p>Unattended Oh My Zsh install. Sets Zsh as the default shell.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">11</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Zsh customization</h3><p>Powerlevel10k theme, autosuggestions, syntax highlighting, completions.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">12</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Zsh plugins</h3><p>Extended plugin set for a productive terminal.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">13</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Zsh aliases</h3><p>Custom alias block written to <code>.zshrc</code>.</p></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">14</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Powerlevel10k config</h3><p>Bundled p10k preset applied with optional custom segment overrides.</p>
+      <div class="step-tags"><span class="stag">--p10k-preset</span><span class="stag">--p10k-segments</span></div></div>
+    </div>
+    <div class="step-row">
+      <div class="step-num-wrap"><div class="step-num">15</div><div class="step-line"></div></div>
+      <div></div>
+      <div class="step-content"><h3>Extra software</h3><p>Third-party APT repos and Snap packages. Official sources, idempotent, grouped or individual.</p>
+      <div class="step-tags"><span class="stag">--extras &lt;group|name,...&gt;</span></div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- EXTRAS -->
+<div id="extras">
+<div class="section fade-in">
+  <div class="section-tag">Extras</div>
+  <h2 class="section-title">20 tools. 13 groups. One flag.</h2>
+  <p class="section-sub">Each extra configures the official keyring and APT source, then installs the package. Groups deduplicate automatically — mix freely. Use <code>--skip-extras</code> to exclude specific tools from a group.</p>
+
+  <div class="pre-wrap" style="margin-bottom:2rem">
+    <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<pre><span style="color:var(--dim)"># Meta-groups</span>
+--extras default
+--extras all
+
+<span style="color:var(--dim)"># Atomic groups</span>
+--extras devops
+--extras browsers,messaging
+
+<span style="color:var(--dim)"># Group minus specific extras</span>
+--extras devops --skip-extras podman,azurecli
+
+<span style="color:var(--dim)"># Individuals</span>
+--extras docker,gh,signal</pre>
+  </div>
+
+  <div class="extras-layout" id="extras-ui">
+    <div class="extras-sidebar">
+      <button class="group-btn active" data-group="all" onclick="showGroup(this,'all')">all <span class="gcnt">20</span></button>
+      <button class="group-btn" data-group="minimal" onclick="showGroup(this,'minimal')">minimal <span class="gcnt">4</span></button>
+      <button class="group-btn" data-group="default" onclick="showGroup(this,'default')">default <span class="gcnt">7</span></button>
+      <button class="group-btn" data-group="devops" onclick="showGroup(this,'devops')">devops <span class="gcnt">5</span></button>
+      <button class="group-btn" data-group="containers" onclick="showGroup(this,'containers')">containers <span class="gcnt">2</span></button>
+      <button class="group-btn" data-group="browsers" onclick="showGroup(this,'browsers')">browsers <span class="gcnt">4</span></button>
+      <button class="group-btn" data-group="messaging" onclick="showGroup(this,'messaging')">messaging <span class="gcnt">5</span></button>
+      <button class="group-btn" data-group="privacy" onclick="showGroup(this,'privacy')">privacy <span class="gcnt">4</span></button>
+      <button class="group-btn" data-group="microsoft" onclick="showGroup(this,'microsoft')">microsoft <span class="gcnt">4</span></button>
+      <button class="group-btn" data-group="editors" onclick="showGroup(this,'editors')">editors <span class="gcnt">3</span></button>
+      <button class="group-btn" data-group="office" onclick="showGroup(this,'office')">office <span class="gcnt">3</span></button>
+      <button class="group-btn" data-group="security" onclick="showGroup(this,'security')">security <span class="gcnt">3</span></button>
+      <button class="group-btn" data-group="media" onclick="showGroup(this,'media')">media <span class="gcnt">1</span></button>
+    </div>
+    <div class="extras-panel">
+      <div class="extras-pills-grid" id="extras-pills"></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- OPTIONS -->
+<div id="options" style="background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+<div class="section fade-in">
+  <div class="section-tag">Options</div>
+  <h2 class="section-title">Every default documented.<br>Every choice overridable.</h2>
+  <p class="section-sub">All flags are parsed before execution. Order doesn't matter.</p>
+
+  <div class="opts-grid">
+    <div class="opt-group">
+      <div class="opt-group-head">🔥 Firewall</div>
+      <div class="opt-row"><div class="opt-flag">--firewall</div><div class="opt-desc">Engine: <code>ufw</code>, <code>nftables</code>, <code>iptables</code> (default: ufw)</div></div>
+      <div class="opt-row"><div class="opt-flag">--firewall-profile</div><div class="opt-desc"><code>hardened</code> or <code>transparent</code> (default: hardened)</div></div>
+      <div class="opt-row"><div class="opt-flag">--allow-ssh</div><div class="opt-desc">Open port 22 in hardened mode</div></div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-group-head">🔒 Hardening</div>
+      <div class="opt-row"><div class="opt-flag">--hardening-profile</div><div class="opt-desc"><code>desktop</code> / <code>enterprise</code> / <code>server</code> (default: desktop)</div></div>
+      <div class="opt-row"><div class="opt-flag">--no-lock-root</div><div class="opt-desc">Skip root account lock (CIS 5.4.2)</div></div>
+      <div class="opt-row"><div class="opt-flag">--no-usbguard</div><div class="opt-desc">Skip USBGuard installation</div></div>
+      <div class="opt-row"><div class="opt-flag">--skip-services</div><div class="opt-desc">Comma-separated services to preserve</div></div>
+      <div class="opt-row"><div class="opt-flag">--skip-packages</div><div class="opt-desc">Comma-separated packages to preserve</div></div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-group-head">🎨 Display</div>
+      <div class="opt-row"><div class="opt-flag">--theme</div><div class="opt-desc"><code>dark</code> / <code>light</code> / <code>auto</code> (default: dark)</div></div>
+      <div class="opt-row"><div class="opt-flag">--gtk-theme</div><div class="opt-desc">Override GTK theme (Yaru, Adwaita, …)</div></div>
+      <div class="opt-row"><div class="opt-flag">--bg-color</div><div class="opt-desc">Desktop background hex color</div></div>
+      <div class="opt-row"><div class="opt-flag">--dock-icon-size</div><div class="opt-desc">Icon size 16–128px (default: 42)</div></div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-group-head">⚡ Power</div>
+      <div class="opt-row"><div class="opt-flag">--power-profile</div><div class="opt-desc"><code>performance</code> / <code>balanced</code> / <code>power-saver</code></div></div>
+      <div class="opt-row"><div class="opt-flag">--allow-suspend</div><div class="opt-desc">Keep auto suspend enabled</div></div>
+      <div class="opt-row"><div class="opt-flag">--no-night-light</div><div class="opt-desc">Disable Night Light (default: on)</div></div>
+      <div class="opt-row"><div class="opt-flag">--night-light-temp</div><div class="opt-desc">Color temp 1000–6500K (default: 2700)</div></div>
+      <div class="opt-row"><div class="opt-flag">--keyboard-layouts</div><div class="opt-desc">xkb codes, e.g. <code>us,fr+azerty</code></div></div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-group-head">📦 Apps</div>
+      <div class="opt-row"><div class="opt-flag">--apps-profile</div><div class="opt-desc"><code>minimal</code> / <code>default</code> / <code>extra</code></div></div>
+      <div class="opt-row"><div class="opt-flag">--extra-packages</div><div class="opt-desc">APT packages to add to profile</div></div>
+      <div class="opt-row"><div class="opt-flag">--skip-apt-packages</div><div class="opt-desc">APT packages to remove from profile</div></div>
+      <div class="opt-row"><div class="opt-flag">--no-snap</div><div class="opt-desc">Skip all Snap installation</div></div>
+      <div class="opt-row"><div class="opt-flag">--no-mullvad</div><div class="opt-desc">Skip Mullvad VPN</div></div>
+      <div class="opt-row"><div class="opt-flag">--mullvad-source</div><div class="opt-desc"><code>apt</code> / <code>direct</code> / <code>github</code></div></div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-group-head">🦊 Firefox</div>
+      <div class="opt-row"><div class="opt-flag">--firefox-profiles</div><div class="opt-desc">Profile names to create (default: root)</div></div>
+      <div class="opt-row"><div class="opt-flag">--firefox-hardened-profiles</div><div class="opt-desc">Pure arkenfox — max privacy</div></div>
+      <div class="opt-row"><div class="opt-flag">--firefox-relaxed-profiles</div><div class="opt-desc">arkenfox + usability overrides</div></div>
+      <div class="opt-row"><div class="opt-flag">--firefox-extra-extensions</div><div class="opt-desc">Install extended extension set</div></div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-group-head">📝 Editor</div>
+      <div class="opt-row"><div class="opt-flag">--editor</div><div class="opt-desc"><code>both</code> / <code>vim</code> / <code>neovim</code> / <code>none</code></div></div>
+      <div class="opt-row"><div class="opt-flag">--vim-preset</div><div class="opt-desc"><code>full</code> / <code>minimal</code> / <code>bare</code></div></div>
+      <div class="opt-row"><div class="opt-flag">--vim-colorscheme</div><div class="opt-desc">Built-in scheme for bare preset</div></div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-group-head">🐚 Zsh</div>
+      <div class="opt-row"><div class="opt-flag">--p10k-preset</div><div class="opt-desc">Powerlevel10k prompt preset</div></div>
+      <div class="opt-row"><div class="opt-flag">--p10k-segments</div><div class="opt-desc">Apply extended segment config</div></div>
+      <div class="opt-row"><div class="opt-flag">--no-p10k-custom</div><div class="opt-desc">Skip custom p10k segment overrides</div></div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-group-head">⚙️ General</div>
+      <div class="opt-row"><div class="opt-flag">--steps</div><div class="opt-desc">Run specific steps e.g. <code>1,3-7,15</code></div></div>
+      <div class="opt-row"><div class="opt-flag">--no-emojis</div><div class="opt-desc">Plain text output (for CI / logging)</div></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- EXAMPLES -->
+<div id="examples">
+<div class="section fade-in">
+  <div class="section-tag">Examples</div>
+  <h2 class="section-title">Common setups, ready to copy.</h2>
+
+  <div class="examples-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+
+    <div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Developer machine</h3>
+      <div class="pre-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<pre>bash ubuntu-post-install.sh \
+  --apps-profile extra \
+  --extras devops,vscode,signal \
+  --editor both \
+  --power-profile performance</pre>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Privacy workstation</h3>
+      <div class="pre-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<pre>bash ubuntu-post-install.sh \
+  --extras privacy \
+  --firefox-profiles work,personal \
+  --firefox-hardened-profiles work \
+  --firefox-relaxed-profiles personal</pre>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Enterprise laptop</h3>
+      <div class="pre-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<pre>bash ubuntu-post-install.sh \
+  --hardening-profile enterprise \
+  --keep-avahi --keep-cups \
+  --extras microsoft \
+  --keyboard-layouts us,fr</pre>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">VPS / headless server</h3>
+      <div class="pre-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<pre>bash ubuntu-post-install.sh \
+  --hardening-profile server \
+  --no-lock-root --no-snap \
+  --no-mullvad \
+  --steps 1,2,4,5</pre>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Custom look</h3>
+      <div class="pre-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<pre>bash ubuntu-post-install.sh \
+  --bg-color '#1e1e2e' \
+  --gtk-theme Yaru-purple-dark \
+  --night-light-temp 3200 \
+  --dock-icon-size 48</pre>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem;text-transform:uppercase;letter-spacing:.05em">Re-run specific steps</h3>
+      <div class="pre-wrap">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+<pre><span style="color:var(--dim)"># Hardening and apps only</span>
+bash ubuntu-post-install.sh --steps 4,5
+
+<span style="color:var(--dim)"># Install all extras</span>
+bash ubuntu-post-install.sh --extras all --steps 15</pre>
+      </div>
+    </div>
+
+  </div>
+</div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section fade-in">
+  <h2>Ready to automate your setup?</h2>
+  <p>One script. Auditable. No internet requirements after download (for most steps).</p>
+  <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;position:relative">
+    <a href="https://github.com/franckferman/ubuntu-post-install/blob/stable/ubuntu-post-install.sh" class="btn btn-primary" target="_blank" rel="noopener">Download script</a>
+    <a href="https://github.com/franckferman/ubuntu-post-install#readme" class="btn btn-secondary" target="_blank" rel="noopener">Read the docs</a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  ubuntu-post-install v2.0.0 · <a href="https://github.com/franckferman" style="color:var(--dim)">Franck FERMAN</a> · <a href="https://github.com/franckferman/ubuntu-post-install" style="color:var(--dim)">GitHub</a> · <a href="LICENSE" style="color:var(--dim)">AGPL-3.0</a> · 2026
+</footer>
+
+<script>
+// ─── EXTRAS DATA ───
+const EXTRAS = [
+  { key:'docker',    desc:'Docker CE + Compose',       method:'apt',  groups:['all','devops','containers','default','minimal'] },
+  { key:'gh',        desc:'GitHub CLI',                method:'apt',  groups:['all','devops','default','minimal'] },
+  { key:'hashicorp', desc:'terraform, vault, packer…', method:'apt',  groups:['all','devops'] },
+  { key:'podman',    desc:'Podman container runtime',  method:'apt',  groups:['all','devops','containers'] },
+  { key:'azurecli',  desc:'Azure CLI',                 method:'apt',  groups:['all','devops','microsoft'] },
+  { key:'brave',     desc:'Brave browser',             method:'apt',  groups:['all','browsers','privacy','default'] },
+  { key:'chrome',    desc:'Google Chrome',             method:'apt',  groups:['all','browsers'] },
+  { key:'vivaldi',   desc:'Vivaldi browser',           method:'apt',  groups:['all','browsers'] },
+  { key:'edge',      desc:'Microsoft Edge',            method:'apt',  groups:['all','browsers','microsoft'] },
+  { key:'signal',    desc:'Signal Desktop',            method:'apt',  groups:['all','messaging','privacy','security','default','minimal'] },
+  { key:'telegram',  desc:'Telegram Desktop',          method:'snap', groups:['all','messaging','default'] },
+  { key:'element',   desc:'Element (Matrix)',           method:'apt',  groups:['all','messaging','privacy','security','default'] },
+  { key:'slack',     desc:'Slack',                     method:'apt',  groups:['all','messaging','office'] },
+  { key:'teams',     desc:'Teams for Linux',           method:'apt',  groups:['all','messaging','microsoft','office'] },
+  { key:'protonvpn', desc:'ProtonVPN Linux app',       method:'apt',  groups:['all','privacy','security'] },
+  { key:'vscode',    desc:'VS Code',                   method:'apt',  groups:['all','editors','microsoft','default','minimal'] },
+  { key:'sublime',   desc:'Sublime Text',              method:'apt',  groups:['all','editors'] },
+  { key:'wine',      desc:'WineHQ stable',             method:'apt',  groups:['all','office'] },
+  { key:'spotify',   desc:'Spotify',                   method:'apt',  groups:['all','media'] },
+  { key:'antigravity', desc:'AntiGravity (AI dev tool)', method:'apt',  groups:['all','editors'] },
+];
+
+function renderPills(items) {
+  const grid = document.getElementById('extras-pills');
+  grid.innerHTML = items.map(e => `
+    <div class="epill">
+      <div class="epill-name">${e.key}</div>
+      <div class="epill-desc">${e.desc}</div>
+      <span class="epill-method ${e.method}">${e.method}</span>
+    </div>
+  `).join('');
+}
+
+function showGroup(btn, group) {
+  document.querySelectorAll('.group-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPills(EXTRAS.filter(e => e.groups.includes(group)));
+}
+
+renderPills(EXTRAS);
+
+// ─── COPY BUTTON ───
+function copyCode(btn) {
+  const pre = btn.nextElementSibling;
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('ok'); }, 1800);
+  });
+}
+
+// ─── SCROLL FADE-IN ───
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+// ─── ACTIVE NAV ON SCROLL ───
+const navAnchors = document.querySelectorAll('header a[href^="#"]');
+const scrollSections = ['features','quickstart','steps','extras','options','examples'].map(id => document.getElementById(id)).filter(Boolean);
+window.addEventListener('scroll', () => {
+  const mid = window.scrollY + window.innerHeight * 0.4;
+  let current = null;
+  scrollSections.forEach(s => { if (s.offsetTop <= mid) current = s.id; });
+  navAnchors.forEach(a => {
+    a.style.color = a.getAttribute('href') === '#' + current ? 'var(--text)' : '';
+  });
+}, { passive: true });
+</script>
+</body>
+</html>
