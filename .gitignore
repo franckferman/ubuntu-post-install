@@ -1,0 +1,68 @@
+# Shell/Bash Scripts
+*.bak
+*.orig
+*.tmp
+*.old
+
+# Logs and debug
+*.log
+*.log.*
+*.out
+*.err
+*.trace
+nohup.out
+
+# Generated
+*.pid
+*.lock
+*.sock
+*.history
+
+# Compilation & Binaries
+bin/
+obj/
+*.o
+*.so
+*.a
+*.la
+*.lo
+*.dylib
+*.exe
+*.dll
+*.com
+Makefile~
+*.d
+
+# Editors
+*.swp
+*.swo
+*.swn
+*.viminfo
+.nanorc
+*.save
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+.idea/
+*.iml
+*~
+*.spacemacs
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100/
+.Trashes/
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+*.lnk
+Desktop.ini
+$RECYCLE.BIN/
+
+# Project
+CLAUDE.md
